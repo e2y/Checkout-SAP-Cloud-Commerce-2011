@@ -1,6 +1,7 @@
 package com.checkout.hybris.facades.payment.converters.populators;
 
-import com.checkout.hybris.facades.beans.*;
+import com.checkout.dto.order.*;
+import com.checkout.hybris.facades.beans.GooglePaySettingsData;
 import de.hybris.platform.commercefacades.order.CartFacade;
 import de.hybris.platform.commercefacades.order.data.CartData;
 import de.hybris.platform.converters.Populator;
@@ -12,14 +13,14 @@ import static de.hybris.platform.servicelayer.util.ServicesUtil.validateParamete
 /**
  * Populates attributes from {@link GooglePaySettingsData}.
  */
-public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<GooglePaySettingsData, GooglePayMerchantConfigurationData> {
+public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<GooglePaySettingsData, GooglePayMerchantConfiguration> {
 
     protected static final String FORMAT = "FULL";
 
-    protected final Converter<CartData, GooglePayTransactionInfoData> checkoutComGooglePayTransactionInfoConverter;
+    protected final Converter<CartData, GooglePayTransactionInfo> checkoutComGooglePayTransactionInfoConverter;
     protected final CartFacade cartFacade;
 
-    public CheckoutComGooglePayPaymentRequestPopulator(final Converter<CartData, GooglePayTransactionInfoData> checkoutComGooglePayTransactionInfoConverter,
+    public CheckoutComGooglePayPaymentRequestPopulator(final Converter<CartData, GooglePayTransactionInfo> checkoutComGooglePayTransactionInfoConverter,
                                                        final CartFacade cartFacade) {
         this.checkoutComGooglePayTransactionInfoConverter = checkoutComGooglePayTransactionInfoConverter;
         this.cartFacade = cartFacade;
@@ -29,7 +30,7 @@ public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<Go
      * {@inheritDoc}.
      */
     @Override
-    public void populate(final GooglePaySettingsData source, final GooglePayMerchantConfigurationData target) throws ConversionException {
+    public void populate(final GooglePaySettingsData source, final GooglePayMerchantConfiguration target) throws ConversionException {
         validateParameterNotNull(source, "GooglePaySettingsData cannot be null.");
         validateParameterNotNull(target, "GooglePayPaymentRequest cannot be null.");
 
@@ -48,8 +49,8 @@ public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<Go
      * @param source Google Pay settings.
      * @param target Google Pay merchant configuration.
      */
-    protected void populateBaseCardPaymentMethod(final GooglePaySettingsData source, final GooglePayMerchantConfigurationData target) {
-        final BaseCardPaymentMethodData baseCardPaymentMethod = new BaseCardPaymentMethodData();
+    protected void populateBaseCardPaymentMethod(final GooglePaySettingsData source, final GooglePayMerchantConfiguration target) {
+        final BaseCardPaymentMethod baseCardPaymentMethod = new BaseCardPaymentMethod();
 
         baseCardPaymentMethod.setType(source.getType());
         populateParameters(source, baseCardPaymentMethod);
@@ -63,8 +64,8 @@ public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<Go
      * @param source                Google Pay settings.
      * @param baseCardPaymentMethod base card payment method.
      */
-    protected void populateParameters(final GooglePaySettingsData source, final BaseCardPaymentMethodData baseCardPaymentMethod) {
-        final BaseCardPaymentMethodParametersData baseCardPaymentMethodParameters = new BaseCardPaymentMethodParametersData();
+    protected void populateParameters(final GooglePaySettingsData source, final BaseCardPaymentMethod baseCardPaymentMethod) {
+        final BaseCardPaymentMethodParameters baseCardPaymentMethodParameters = new BaseCardPaymentMethodParameters();
 
         baseCardPaymentMethodParameters.setAllowedAuthMethods(source.getAllowedAuthMethods());
         baseCardPaymentMethodParameters.setAllowedCardNetworks(source.getAllowedCardNetworks());
@@ -79,8 +80,8 @@ public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<Go
      *
      * @param baseCardPaymentMethodParameters base card parameters.
      */
-    protected void populateBillingAddressParameters(final BaseCardPaymentMethodParametersData baseCardPaymentMethodParameters) {
-        final GooglePayBillingAddressParametersFormatData googlePayBillingAddressParameters = new GooglePayBillingAddressParametersFormatData();
+    protected void populateBillingAddressParameters(final BaseCardPaymentMethodParameters baseCardPaymentMethodParameters) {
+        final GooglePayBillingAddressParametersFormat googlePayBillingAddressParameters = new GooglePayBillingAddressParametersFormat();
 
         googlePayBillingAddressParameters.setFormat(FORMAT);
 
@@ -92,8 +93,8 @@ public class CheckoutComGooglePayPaymentRequestPopulator implements Populator<Go
      * @param source Google Pay settings.
      * @param target Google Pay merchant configuration.
      */
-    protected void populateClientSettings(final GooglePaySettingsData source, final GooglePayMerchantConfigurationData target) {
-        final GooglePayClientSettingsData googlePayClientSettings = new GooglePayClientSettingsData();
+    protected void populateClientSettings(final GooglePaySettingsData source, final GooglePayMerchantConfiguration target) {
+        final GooglePayClientSettings googlePayClientSettings = new GooglePayClientSettings();
 
         googlePayClientSettings.setEnvironment(source.getEnvironment());
 

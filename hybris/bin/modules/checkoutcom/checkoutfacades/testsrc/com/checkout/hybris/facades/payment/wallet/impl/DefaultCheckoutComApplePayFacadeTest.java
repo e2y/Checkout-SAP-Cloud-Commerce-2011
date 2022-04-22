@@ -1,6 +1,10 @@
 package com.checkout.hybris.facades.payment.wallet.impl;
 
-import com.checkout.hybris.facades.beans.*;
+import com.checkout.dto.order.ApplePayPaymentRequest;
+import com.checkout.dto.order.ApplePayTotal;
+import com.checkout.hybris.facades.beans.ApplePayPaymentContact;
+import com.checkout.hybris.facades.beans.ApplePaySettingsData;
+import com.checkout.hybris.facades.beans.ApplePayValidateMerchantData;
 import com.checkout.hybris.facades.merchant.CheckoutComMerchantConfigurationFacade;
 import com.checkout.hybris.facades.payment.CheckoutComPaymentFacade;
 import de.hybris.bootstrap.annotations.UnitTest;
@@ -84,9 +88,9 @@ public class DefaultCheckoutComApplePayFacadeTest {
 
     @Test
     public void getApplePayPaymentRequest_WhenApplePaySettingFound_ShouldReturnPopulatedRequest() {
-        final ApplePayPaymentRequestData result = testObj.getApplePayPaymentRequest();
+        final ApplePayPaymentRequest result = testObj.getApplePayPaymentRequest();
 
-        final ApplePayTotalData total = result.getTotal();
+        final ApplePayTotal total = result.getTotal();
         assertThat(total).isNotNull();
         assertThat(total.getAmount()).isEqualTo(BigDecimal.TEN.toString());
         assertThat(total.getLabel()).isEqualTo(MERCHANT_NAME);

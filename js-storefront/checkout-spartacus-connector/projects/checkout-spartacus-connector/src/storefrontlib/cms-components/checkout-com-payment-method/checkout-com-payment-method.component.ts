@@ -6,22 +6,24 @@ import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject, EMPTY, Observable, Subject } from 'rxjs';
 import { finalize, skip, switchMap, take, takeUntil } from 'rxjs/operators';
 /* Spartacus */
+import { CheckoutStepService, PaymentMethodComponent } from '@spartacus/storefront';
 import {
   ActiveCartService,
   Address,
+  CheckoutDeliveryService,
+  CheckoutPaymentService,
+  CheckoutService,
   GlobalMessageService,
   PaymentDetails,
   TranslationService,
   UserIdService,
   UserPaymentService
 } from '@spartacus/core';
-import { CheckoutStepService, PaymentMethodComponent } from '@spartacus/checkout/components';
 /* CheckoutCom */
 import { CheckoutComPaymentService } from '../../../core/services/checkout-com-payment.service';
 import { ApmData, PaymentType } from '../../../core/model/ApmData';
 import { ApmPaymentDetails, CheckoutComPaymentDetails } from '../../interfaces';
 import { CheckoutComApmService } from '../../../core/services/checkout-com-apm.service';
-import { CheckoutDeliveryFacade, CheckoutFacade, CheckoutPaymentFacade } from '@spartacus/checkout/root';
 
 @Component({
   selector: 'lib-checkout-com-payment-method',
@@ -47,13 +49,13 @@ export class CheckoutComPaymentMethodComponent extends PaymentMethodComponent im
 
   constructor(
     protected activeCartService: ActiveCartService,
-    protected checkoutService: CheckoutFacade,
+    protected checkoutService: CheckoutService,
     protected activatedRoute: ActivatedRoute,
     protected translation: TranslationService,
     protected checkoutStepService: CheckoutStepService,
     protected userPaymentService: UserPaymentService,
-    protected checkoutDeliveryService: CheckoutDeliveryFacade,
-    protected checkoutPaymentService: CheckoutPaymentFacade,
+    protected checkoutDeliveryService: CheckoutDeliveryService,
+    protected checkoutPaymentService: CheckoutPaymentService,
     protected globalMessageService: GlobalMessageService,
     protected checkoutComPaymentService: CheckoutComPaymentService,
     protected userIdService: UserIdService,

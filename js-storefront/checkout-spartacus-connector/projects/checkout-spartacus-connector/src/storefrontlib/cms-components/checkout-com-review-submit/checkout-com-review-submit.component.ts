@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Card } from '@spartacus/storefront';
-import { ReviewSubmitComponent } from '@spartacus/checkout/components';
+import { Card, ReviewSubmitComponent } from '@spartacus/storefront';
 import { combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -27,7 +26,7 @@ export class CheckoutComReviewSubmitComponent extends ReviewSubmitComponent {
           : '';
         return {
           title: textTitle,
-          text: [paymentDetails.accountHolderName, paymentDetails.cardNumber, textExpires],
+          text: [paymentDetails.cardNumber, textExpires],
           paragraphs: [
             {
               title: billingAddress + ':',

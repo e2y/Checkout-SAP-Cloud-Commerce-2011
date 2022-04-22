@@ -8,10 +8,9 @@ import {
   provideConfig,
   SiteContextConfig
 } from '@spartacus/core';
-import { defaultCmsContentProviders, layoutConfig, mediaConfig } from '@spartacus/storefront';
+import { CheckoutConfig, defaultCmsContentProviders, layoutConfig, mediaConfig } from '@spartacus/storefront';
 import { checkoutComTranslationChunkConfig, checkoutComTranslations } from 'checkout-spartacus-translations';
 import { environment } from '../../environments/environment';
-import { CheckoutConfig } from '@spartacus/checkout/root';
 
 @NgModule({
   declarations: [],
@@ -23,6 +22,8 @@ import { CheckoutConfig } from '@spartacus/checkout/root';
     },
   } as OccConfig), provideConfig({
     context: {
+      currency: ['USD'],
+      language: ['en'],
       baseSite: ['electronics-spa'],
     },
   } as SiteContextConfig), provideConfig({

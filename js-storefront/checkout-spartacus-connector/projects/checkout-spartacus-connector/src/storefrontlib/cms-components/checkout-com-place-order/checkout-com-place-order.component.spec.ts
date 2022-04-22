@@ -1,8 +1,9 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { waitForAsync, ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import {
+  CheckoutService,
   DaysOfWeek,
   I18nTestingModule,
   ORDER_TYPE,
@@ -10,13 +11,10 @@ import {
   RoutingService,
   ScheduleReplenishmentForm,
 } from '@spartacus/core';
-import { CheckoutService } from '@spartacus/checkout/core'
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { CheckoutComPlaceOrderComponent } from './checkout-com-place-order.component';
-import { LaunchDialogService } from '@spartacus/storefront';
+import { CheckoutReplenishmentFormService, LaunchDialogService, LAUNCH_CALLER, CheckoutStepService } from '@spartacus/storefront';
 import { CheckoutComCheckoutService } from '../../../core/services/checkout-com-checkout.service';
-import { CheckoutReplenishmentFormService, CheckoutStepService } from '@spartacus/checkout/components';
-import { CheckoutFacade } from '@spartacus/checkout/root';
 
 const mockReplenishmentOrderFormData: ScheduleReplenishmentForm = {
   numberOfDays: 'test-number-days',
@@ -105,7 +103,7 @@ describe('CheckoutComPlaceOrderComponent', () => {
   let fixture: ComponentFixture<CheckoutComPlaceOrderComponent>;
   let controls: FormGroup['controls'];
 
-  let checkoutFacade: CheckoutFacade;
+  let checkoutService: CheckoutService;
   let checkoutComCheckoutService: CheckoutComCheckoutService;
   let checkoutReplenishmentFormService: CheckoutReplenishmentFormService;
   let routingService: RoutingService;
@@ -118,7 +116,7 @@ describe('CheckoutComPlaceOrderComponent', () => {
         imports: [ReactiveFormsModule, RouterTestingModule, I18nTestingModule],
         declarations: [MockUrlPipe, CheckoutComPlaceOrderComponent],
         providers: [
-          { provide: CheckoutFacade, useClass: MockCheckoutService },
+          { provide: CheckoutService, useClass: MockCheckoutService },
           { provide: CheckoutComCheckoutService, useClass: MockCheckoutService },
           {
             provide: CheckoutReplenishmentFormService,
@@ -140,7 +138,7 @@ describe('CheckoutComPlaceOrderComponent', () => {
 
     controls = component.checkoutSubmitForm.controls;
 
-    checkoutFacade = TestBed.inject(CheckoutFacade);
+    checkoutService = TestBed.inject(CheckoutService);
     checkoutComCheckoutService = TestBed.inject(CheckoutComCheckoutService);
     checkoutReplenishmentFormService = TestBed.inject(
       CheckoutReplenishmentFormService
@@ -150,7 +148,7 @@ describe('CheckoutComPlaceOrderComponent', () => {
     launchDialogService = TestBed.inject(LaunchDialogService);
 
     spyOn(checkoutComCheckoutService, 'placeOrder').and.callThrough();
-    spyOn(checkoutFacade, 'scheduleReplenishmentOrder').and.callThrough();
+    spyOn(checkoutService, 'scheduleReplenishmentOrder').and.callThrough();
     spyOn(
       checkoutReplenishmentFormService,
       'setScheduleReplenishmentFormData'
@@ -175,14 +173,14 @@ describe('CheckoutComPlaceOrderComponent', () => {
       submitForm(ORDER_TYPE.PLACE_ORDER, false);
 
       expect(checkoutComCheckoutService.placeOrder).not.toHaveBeenCalled();
-      expect(checkoutFacade.scheduleReplenishmentOrder).not.toHaveBeenCalled();
+      expect(checkoutService.scheduleReplenishmentOrder).not.toHaveBeenCalled();
     });
 
     it('should place order when checkbox checked', () => {
       submitForm(ORDER_TYPE.PLACE_ORDER, true);
 
       expect(checkoutComCheckoutService.placeOrder).toHaveBeenCalled();
-      expect(checkoutFacade.scheduleReplenishmentOrder).not.toHaveBeenCalled();
+      expect(checkoutService.scheduleReplenishmentOrder).not.toHaveBeenCalled();
     });
 
     it('should NOT change page and reset form data when there is no successful place order', () => {
@@ -211,7 +209,7 @@ describe('CheckoutComPlaceOrderComponent', () => {
       submitForm(ORDER_TYPE.SCHEDULE_REPLENISHMENT_ORDER, false);
 
       expect(checkoutComCheckoutService.placeOrder).not.toHaveBeenCalled();
-      expect(checkoutFacade.scheduleReplenishmentOrder).not.toHaveBeenCalled();
+      expect(checkoutService.scheduleReplenishmentOrder).not.toHaveBeenCalled();
     });
 
     it('should NOT change page and reset form data when there is no successful replenishment order', () => {

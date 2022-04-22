@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CheckoutComOrderConfirmationThankYouMessageComponent } from './checkout-com-order-confirmation-thank-you-message.component';
-import { I18nTestingModule, MockTranslatePipe, Order, ORDER_TYPE } from '@spartacus/core';
-import { Observable, of } from 'rxjs';
-import { CheckoutFacade } from '@spartacus/checkout/root';
 
-class MockCheckoutFacade {
+import { CheckoutComOrderConfirmationThankYouMessageComponent } from './checkout-com-order-confirmation-thank-you-message.component';
+import { CheckoutService, I18nTestingModule, MockTranslatePipe, Order, ORDER_TYPE } from '@spartacus/core';
+import { Observable, of } from 'rxjs';
+
+class MockCheckoutService {
   clearCheckoutData(){}
 
   getOrderDetails(): Observable<Order> {
@@ -25,19 +25,19 @@ class MockCheckoutFacade {
 describe('CheckoutComOrderConfirmationThankYouMessageComponent', () => {
   let component: CheckoutComOrderConfirmationThankYouMessageComponent;
   let fixture: ComponentFixture<CheckoutComOrderConfirmationThankYouMessageComponent>;
-  let checkoutService: CheckoutFacade;
+  let checkoutService: CheckoutService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [CheckoutComOrderConfirmationThankYouMessageComponent, MockTranslatePipe],
       providers: [
         I18nTestingModule,
-        {provide: CheckoutFacade, useClass: MockCheckoutFacade}
+        {provide: CheckoutService, useClass: MockCheckoutService}
       ]
     })
       .compileComponents();
 
-    checkoutService = TestBed.inject(CheckoutFacade);
+    checkoutService = TestBed.inject(CheckoutService);
   });
 
   beforeEach(() => {

@@ -146,15 +146,12 @@ window.onload = function () {
         document.getElementById("cardType").value = event.scheme;
         document.getElementById("validToMonth").value = event.expiry_month;
         document.getElementById("validToYear").value = event.expiry_year;
-        document.getElementById("accountHolderName").value = $('#cardholdername').val();
         var markToSave = document.getElementById("markToSave");
         if (markToSave !== null) {
             document.getElementById("saveCard").value = markToSave.value === 'on' ? true : false;
         }
-
-        $('#checkoutComPaymentTokenForm')
-            .attr('action', ACC.config.encodedContextPath + '/checkout/multi/checkout-com/payment/submit-payment-data')
-            .submit();
+        $('#checkoutComPaymentTokenForm').attr('action', ACC.config.encodedContextPath + '/checkout/multi/checkout-com/payment/submit-payment-data');
+        document.getElementById("checkoutComPaymentTokenForm").submit();
     }
 
     Frames.addEventHandler(
@@ -179,9 +176,4 @@ window.onload = function () {
         Frames.submitCard();
     }, false);
 
-    $('#cardholdername').on('change', function () {
-        Frames.cardholder = {
-            name: $(this).val()
-        }
-    });
 };

@@ -4,7 +4,6 @@ import { OccEndpoint } from '@spartacus/core';
 declare module '@spartacus/core' {
   interface OccEndpoints {
     merchantKey?: string | OccEndpoint;
-    setDeliveryAddress?: string | OccEndpoint;
     setPaymentAddress?: string | OccEndpoint;
     setPaymentDetails?: string | OccEndpoint;
     setApmPaymentDetails?: string | OccEndpoint;

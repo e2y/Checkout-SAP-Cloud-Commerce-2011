@@ -1,14 +1,17 @@
 /* Angular */
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 /* Rxjs */
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { CheckoutComPaymentDetails } from '../../interfaces';
-import { debounceTime, distinctUntilChanged, filter, map, take, takeUntil } from 'rxjs/operators';
+import { filter, map, take, takeUntil } from 'rxjs/operators';
 /* Spartacus */
+import { ModalService, PaymentFormComponent } from '@spartacus/storefront';
 import {
   Address,
   CardType,
+  CheckoutDeliveryService,
+  CheckoutPaymentService,
   GlobalMessageService,
   GlobalMessageType,
   TranslationService,
@@ -16,24 +19,23 @@ import {
   UserIdService,
   UserPaymentService
 } from '@spartacus/core';
-import { ModalService } from '@spartacus/storefront';
-import { PaymentFormComponent } from '@spartacus/checkout/components';
 /* CheckoutCom */
 import { CheckoutComPaymentService } from '../../../core/services/checkout-com-payment.service';
 import {
   FrameCardTokenizationFailedEvent,
   FrameCardTokenizedEvent,
-  FramePaymentMethodChangedEvent, FramesCardholder,
+  FramePaymentMethodChangedEvent,
   FramesLocalization
 } from '../checkout-com-frames-form/interfaces';
 import { makeFormErrorsVisible } from '../../../core/shared/make-form-errors-visible';
-import { CheckoutDeliveryFacade, CheckoutPaymentFacade } from '@spartacus/checkout/root';
 
 @Component({
   selector: 'lib-checkout-com-payment-form',
   templateUrl: './checkout-com-payment-form.component.html',
+  styleUrls: ['./checkout-com-payment-form.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+
 export class CheckoutComPaymentFormComponent extends PaymentFormComponent implements OnInit, OnDestroy {
   @Input() processing = false;
   @Output() setPaymentDetails = new EventEmitter<{
@@ -45,18 +47,16 @@ export class CheckoutComPaymentFormComponent extends PaymentFormComponent implem
   public canSaveCard$ = new BehaviorSubject<boolean>(false);
   public paymentForm = this.fb.group({
     defaultPayment: [false],
-    save: [false],
-    accountHolderName: ['', false],
+    save: [false]
   });
   private drop = new Subject<void>();
   private spartacusCardTypes: CardType[] = [];
   private framesPaymentMethod: string = null;
   framesLocalization$: Observable<FramesLocalization>;
-  framesCardholder$ = new EventEmitter<FramesCardholder>();
 
   constructor(
-    protected checkoutPaymentService: CheckoutPaymentFacade,
-    protected checkoutDeliveryService: CheckoutDeliveryFacade,
+    protected checkoutPaymentService: CheckoutPaymentService,
+    protected checkoutDeliveryService: CheckoutDeliveryService,
     protected userPaymentService: UserPaymentService,
     protected globalMessageService: GlobalMessageService,
     protected fb: FormBuilder,
@@ -90,19 +90,6 @@ export class CheckoutComPaymentFormComponent extends PaymentFormComponent implem
     });
 
     this.framesLocalization$ = this.getFramesLocalization();
-
-    this.paymentForm.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        takeUntil(this.drop),
-      ).subscribe((changes) => {
-      const {accountHolderName} = changes;
-
-      this.framesCardholder$.emit({
-        name: accountHolderName
-      });
-    })
   }
 
   next() {
@@ -131,9 +118,9 @@ export class CheckoutComPaymentFormComponent extends PaymentFormComponent implem
     }
 
     const details: CheckoutComPaymentDetails = {
-      addressLine1: billingAddress?.line1,
-      addressLine2: billingAddress?.line2,
-      city: billingAddress?.town,
+      addressLine1: billingAddress?.addressLine1,
+      addressLine2: billingAddress?.addressLine2,
+      city: billingAddress?.city,
       country: billingAddress?.country,
       postalCode: billingAddress?.postalCode,
       billingAddress,
@@ -145,8 +132,7 @@ export class CheckoutComPaymentFormComponent extends PaymentFormComponent implem
       paymentToken: event.token,
       type: event.type.toUpperCase(),
       cardBin: event.bin,
-      saved: userInput.save,
-      accountHolderName: userInput.accountHolderName,
+      saved: userInput.save
     };
 
     this.submitting$.next(false);
@@ -164,6 +150,7 @@ export class CheckoutComPaymentFormComponent extends PaymentFormComponent implem
   }
 
   ngOnDestroy() {
+    super.ngOnDestroy();
     this.drop.next();
     this.submitting$.next(false);
     this.processing = false;

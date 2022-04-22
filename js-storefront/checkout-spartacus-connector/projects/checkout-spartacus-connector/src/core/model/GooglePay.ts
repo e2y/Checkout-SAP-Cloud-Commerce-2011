@@ -41,7 +41,6 @@ export interface GooglePayPaymentRequest {
 }
 
 export interface PlaceOrderResponse {
-  redirectUrl: any;
-  status: string;
+  transactionStatus: string;
   orderData: Order;
 }

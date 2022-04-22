@@ -2,26 +2,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { CheckoutComApmComponent } from './checkout-com-apm.component';
 import { CheckoutComApmService } from '../../../core/services/checkout-com-apm.service';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { Observable, of, BehaviorSubject } from 'rxjs';
 import { ApmData, PaymentType } from '../../../core/model/ApmData';
 import { FormBuilder } from '@angular/forms';
-import {
-  ActiveCartService,
-  Cart,
-  Currency,
-  CurrencyService,
-  GlobalMessageService,
-  MockTranslatePipe,
-  UserAddressService,
-  UserIdService,
-  UserPaymentService
-} from '@spartacus/core';
+import { CheckoutDeliveryService, Currency, CurrencyService, UserAddressService, UserPaymentService, MockTranslatePipe, ActiveCartService, UserIdService, Cart, GlobalMessageService } from '@spartacus/core';
 import { take } from 'rxjs/operators';
 import { CheckoutComGooglepayService } from '../../../core/services/googlepay/checkout-com-googlepay.service';
 import { GooglePayMerchantConfiguration } from '../../../core/model/GooglePay';
 import { CheckoutComApplepayService } from '../../../core/services/applepay/checkout-com-applepay.service';
 import { ApplePayPaymentRequest } from '../../../core/model/ApplePay';
-import { CheckoutDeliveryFacade } from '@spartacus/checkout/root';
 import createSpy = jasmine.createSpy;
 
 class MockActiveCartService {
@@ -56,7 +45,7 @@ class MockUserPaymentService {
   }
 }
 
-class MockCheckoutDeliveryFacade {
+class MockCheckoutDeliveryService {
   getDeliveryAddress() {
     return of();
   }
@@ -171,7 +160,7 @@ describe('CheckoutComApmComponent', () => {
         {provide: FormBuilder, useClass: FormBuilder},
         {provide: UserAddressService, useClass: MockUserAddressService},
         {provide: UserPaymentService, useClass: MockUserPaymentService},
-        {provide: CheckoutDeliveryFacade, useClass: MockCheckoutDeliveryFacade},
+        {provide: CheckoutDeliveryService, useClass: MockCheckoutDeliveryService},
         {provide: CurrencyService, useClass: MockCurrencyService},
         {provide: CheckoutComGooglepayService, useClass: MockCheckoutComGooglepayService},
         {provide: CurrencyService, useClass: MockCurrencyService},

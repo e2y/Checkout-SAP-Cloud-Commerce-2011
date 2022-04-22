@@ -4,7 +4,7 @@ import {CheckoutComState} from './checkout-com.state';
 import * as CheckoutComActions from './checkout-com.actions';
 import {CheckoutComAction} from './checkout-com.actions';
 import {PaymentType} from '../model/ApmData';
-import { CheckoutActions } from '@spartacus/checkout/core';
+import { CheckoutActions } from '@spartacus/core';
 
 export const initialState: CheckoutComState = {
   paymentDetails: null,

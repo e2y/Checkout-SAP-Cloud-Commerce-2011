@@ -29,16 +29,9 @@ export interface ApmPaymentDetails {
   authorizationToken?: string;
   document?: string;
   country?: string;
-  paymentType?: SepaPaymentTypes;
+  paymentType?: string;
   mobileNumber?: string;
   bic?: string;
-  firstName?: string;
-  lastName?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  postalCode?: string;
-  city?: string;
-  accountIban?: string;
 }
 
 export enum KlarnaPaymentMethodCategory {

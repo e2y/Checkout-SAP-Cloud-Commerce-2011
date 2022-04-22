@@ -33,6 +33,5 @@ public class CheckoutComCCPaymentInfoDataReversePopulator implements Populator<P
         ccPaymentInfoData.setPaymentToken((String) formAttributes.get("paymentToken"));
         ccPaymentInfoData.setSaved(formAttributes.containsKey(SAVE_CARD_KEY) && Boolean.parseBoolean((String) formAttributes.get(SAVE_CARD_KEY)));
         ccPaymentInfoData.setCardBin((String) formAttributes.get("cardBin"));
-        ccPaymentInfoData.setAccountHolderName((String) formAttributes.get("accountHolderName"));
     }
 }

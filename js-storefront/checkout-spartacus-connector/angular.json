@@ -4,7 +4,7 @@
   "newProjectRoot": "projects",
   "projects": {
     "checkout-spartacus-connector": {
-      "projectType": "",
+      "projectType": "library",
       "root": "projects/checkout-spartacus-connector",
       "sourceRoot": "projects/checkout-spartacus-connector/src",
       "prefix": "y",
@@ -59,6 +59,7 @@
             "main": "projects/example-storefront/src/main.ts",
             "polyfills": "projects/example-storefront/src/polyfills.ts",
             "tsConfig": "projects/example-storefront/tsconfig.app.json",
+            "aot": true,
             "assets": [
               "projects/example-storefront/src/favicon.ico",
               "projects/example-storefront/src/assets"
@@ -70,13 +71,7 @@
             "allowedCommonJsDependencies": [
               "qrcode"
             ],
-            "scripts": [],
-            "vendorChunk": true,
-            "extractLicenses": false,
-            "buildOptimizer": false,
-            "sourceMap": true,
-            "optimization": false,
-            "namedChunks": true
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -94,6 +89,7 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
+              "extractCss": true,
               "namedChunks": false,
               "extractLicenses": true,
               "vendorChunk": false,
@@ -126,6 +122,7 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
+              "extractCss": true,
               "namedChunks": false,
               "extractLicenses": true,
               "vendorChunk": false,
@@ -143,8 +140,7 @@
                 }
               ]
             }
-          },
-          "defaultConfiguration": ""
+          }
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",

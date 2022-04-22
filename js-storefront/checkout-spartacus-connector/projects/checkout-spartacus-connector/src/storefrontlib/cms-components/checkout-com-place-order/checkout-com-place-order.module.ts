@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CheckoutComPlaceOrderComponent } from './checkout-com-place-order.component';
-import { UrlModule, I18nModule, CmsConfig, provideConfig } from '@spartacus/core';
+import { ConfigModule, UrlModule, I18nModule, CmsConfig } from '@spartacus/core';
 import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -13,15 +13,13 @@ import { ReactiveFormsModule } from '@angular/forms';
     UrlModule,
     I18nModule,
     ReactiveFormsModule,
-  ],
-  providers: [
-    provideConfig({
+    ConfigModule.withConfig({
       cmsComponents: {
         CheckoutPlaceOrder: {
           component: CheckoutComPlaceOrderComponent
         }
       }
-    } as CmsConfig),
-  ],
+    } as CmsConfig)
+  ]
 })
 export class CheckoutComPlaceOrderModule {}

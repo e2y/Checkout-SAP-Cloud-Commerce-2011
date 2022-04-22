@@ -146,9 +146,6 @@ ACC.googlePay = {
                 url: ACC.config.encodedContextPath + '/checkout/payment/checkout-com/googlepay/placeGooglePayOrder',
                 data: JSON.stringify(data),
                 success: function (response) {
-                    if(response.redirectUrl){
-                        ACC.checkoutCom.redirectToGooglePay3DSUrl(response)
-                    }
                     if (response.status === 'SUCCESS') {
                         resolve(response.orderData);
                     } else {
@@ -189,12 +186,9 @@ ACC.googlePay = {
         if (errorMessage === undefined || errorMessage === '') {
             paymentFailureError = ACC.googlePay.paymentCancelled;
         }
-        setTimeout(() => {
-            $('<div class="alert alert-danger">' + paymentFailureError + '</div>')
-                .prependTo(globalAlerts);
-        }, 1000);
 
-
+        $('<div class="alert alert-danger">' + paymentFailureError + '</div>')
+            .prependTo(globalAlerts);
     }
 
 };

@@ -14,6 +14,6 @@ export interface ApplePayPaymentRequest {
 }
 
 export interface ApplePayAuthorization {
-  status: string;
+  transactionStatus: string;
   orderData: Order;
 }

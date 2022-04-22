@@ -1,26 +1,14 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  NgZone,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild
-} from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, NgZone, ViewChild, ElementRef, OnDestroy, Output, EventEmitter, Input } from '@angular/core';
 import { CheckoutComApmService } from '../../../../core/services/checkout-com-apm.service';
-import { BehaviorSubject, EMPTY, Subject, throwError } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, finalize, switchMap, take, takeUntil, tap } from 'rxjs/operators';
+import { Subject, BehaviorSubject, throwError, EMPTY } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap, finalize, take, filter, tap } from 'rxjs/operators';
 import { KlarnaInitParams } from '../../../../core/interfaces';
-import { ApmPaymentDetails, KlarnaPaymentMethodCategory } from '../../../interfaces';
-import { Address, GlobalMessageService, GlobalMessageType, WindowRef } from '@spartacus/core';
+import { KlarnaPaymentMethodCategory, ApmPaymentDetails } from '../../../interfaces';
+import { GlobalMessageService, GlobalMessageType, Address, CheckoutDeliveryService, WindowRef } from '@spartacus/core';
 import { PaymentType } from '../../../../core/model/ApmData';
 import { FormGroup } from '@angular/forms';
 import { CheckoutComPaymentService } from '../../../../core/services/checkout-com-payment.service';
 import { makeFormErrorsVisible } from '../../../../core/shared/make-form-errors-visible';
-import { CheckoutDeliveryFacade } from '@spartacus/checkout/root';
 
 interface DisplayKlarnaPaymentMethodCategory {
   code: KlarnaPaymentMethodCategory;
@@ -72,7 +60,7 @@ export class CheckoutComKlarnaComponent implements OnInit, OnDestroy {
     protected checkoutComApmSrv: CheckoutComApmService,
     protected msgSrv: GlobalMessageService,
     protected checkoutComPaymentService: CheckoutComPaymentService,
-    protected checkoutDeliveryFacade: CheckoutDeliveryFacade,
+    protected checkoutDeliveryService: CheckoutDeliveryService,
     private ngZone: NgZone,
     protected windowRef: WindowRef,
   ) {
@@ -91,7 +79,7 @@ export class CheckoutComKlarnaComponent implements OnInit, OnDestroy {
       switchMap((sameAsShippingAddress) => {
         this.sameAsShippingAddress = sameAsShippingAddress;
         if (sameAsShippingAddress) {
-          return this.checkoutDeliveryFacade.getDeliveryAddress().pipe(
+          return this.checkoutDeliveryService.getDeliveryAddress().pipe(
             take(1),
             tap((address) => {
               this.currentCountryCode.next(address?.country?.isocode);
@@ -197,7 +185,7 @@ export class CheckoutComKlarnaComponent implements OnInit, OnDestroy {
 
   private klarnaIsReady() {
     this.initializing$.next(true);
-    this.checkoutDeliveryFacade.getDeliveryAddress().pipe(
+    this.checkoutDeliveryService.getDeliveryAddress().pipe(
       switchMap((shippingAddress) => {
         if (shippingAddress == null || typeof shippingAddress !== 'object') {
           return throwError('Shipping address is required');

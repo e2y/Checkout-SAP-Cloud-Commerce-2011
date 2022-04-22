@@ -308,8 +308,7 @@ class CheckoutComCCOrdersTest extends AbstractCheckoutComPaymentsTest {
         then: "error message is thrown"
         with(response) {
             status == SC_BAD_REQUEST
-            data.errors[0].message == 'The application has encountered an error'
-            data.errors[0].type == 'PaymentAuthorizationError'
+            data.errors[0].message == 'Payment authorization was not successful'
         }
 
         where:
@@ -329,8 +328,7 @@ class CheckoutComCCOrdersTest extends AbstractCheckoutComPaymentsTest {
         with(response) {
             if (isNotEmpty(data) && isNotEmpty(data.errors)) println(data)
             status == SC_BAD_REQUEST
-            data.errors[0].message == 'The application has encountered an error'
-            data.errors[0].type == 'PlaceOrderError'
+            data.errors[0].message == 'Failed to place the order'
         }
 
         where:

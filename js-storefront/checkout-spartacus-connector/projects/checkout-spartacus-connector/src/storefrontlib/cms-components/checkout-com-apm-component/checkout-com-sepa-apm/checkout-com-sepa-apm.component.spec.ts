@@ -108,7 +108,7 @@ describe('CheckoutComSepaApmComponent', () => {
           line1: 'Street 1',
           line2: '',
           postalCode: '9000',
-          town: 'New York',
+          city: 'New York',
           country: {isocode: 'US'},
         });
       });
