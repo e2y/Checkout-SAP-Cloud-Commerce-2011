@@ -3,17 +3,19 @@ package com.checkout.hybris.core.payment.services.impl;
 import com.checkout.hybris.core.authorisation.AuthorizeResponse;
 import com.checkout.hybris.core.merchant.services.CheckoutComMerchantConfigurationService;
 import com.checkout.hybris.core.model.CheckoutComAPMPaymentInfoModel;
+import com.checkout.hybris.core.model.CheckoutComApplePayPaymentInfoModel;
 import com.checkout.hybris.core.model.CheckoutComCreditCardPaymentInfoModel;
 import com.checkout.hybris.core.payment.resolvers.CheckoutComPaymentTypeResolver;
 import com.checkout.hybris.core.payment.response.mappers.CheckoutComPaymentResponseStrategyMapper;
 import com.checkout.hybris.core.payment.response.strategies.impl.CheckoutComMultibancoPaymentResponseStrategy;
+import com.checkout.hybris.core.payment.services.CheckoutComPaymentReturnedService;
 import com.checkout.hybris.core.payment.services.CheckoutComPaymentTransactionService;
 import com.checkout.hybris.events.model.CheckoutComPaymentEventModel;
 import com.checkout.payments.CardSourceResponse;
 import com.checkout.payments.PaymentPending;
-import com.google.common.collect.ImmutableList;
 import de.hybris.bootstrap.annotations.UnitTest;
 import de.hybris.platform.commerceservices.order.CommercePaymentProviderStrategy;
+import de.hybris.platform.core.enums.OrderStatus;
 import de.hybris.platform.core.model.c2l.CurrencyModel;
 import de.hybris.platform.core.model.order.CartModel;
 import de.hybris.platform.core.model.order.OrderModel;
@@ -27,16 +29,11 @@ import de.hybris.platform.servicelayer.time.TimeService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Spy;
+import org.mockito.*;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Optional;
 
 import static com.checkout.hybris.core.payment.enums.CheckoutComPaymentType.MULTIBANCO;
@@ -60,15 +57,7 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     private static final String SITE_ID = "siteId";
     private static final String PAYMENT_ID = "PAYMENT_ID";
-    private static final Date CURRENT_DATE = new Date();
     private static final String PAYMENT_REFERENCE = "PAYMENT-REFERENCE";
-    private static final String PROVIDER = "PROVIDER";
-    private static final BigDecimal AMOUNT = new BigDecimal(2000d);
-    private static final String ACTION_ID = "actionId";
-    private static final String SUBSCRIPTION_ID = "subscriptionID";
-    private static final String USER_ID = "USER_ID";
-    private static final String PAYMENT_1_CODE = "payment1Code";
-    private static final String PAYMENT_2_CODE = "payment2Code";
 
     @Spy
     @InjectMocks
@@ -79,45 +68,50 @@ public class DefaultCheckoutComPaymentServiceTest {
     @Mock
     private ModelService modelServiceMock;
     @Mock
+    private CheckoutComPaymentTypeResolver checkoutComPaymentTypeResolverMock;
+    @Mock
+    private CommercePaymentProviderStrategy commercePaymentProviderStrategyMock;
+    @Mock
     private CheckoutComPaymentTransactionService checkoutComPaymentTransactionServiceMock;
+    @Mock
+    private CheckoutComMerchantConfigurationService checkoutComMerchantConfigurationServiceMock;
+    @Mock
+    private CheckoutComPaymentResponseStrategyMapper checkoutComPaymentResponseStrategyMapperMock;
+    @Mock
+    private CheckoutComMultibancoPaymentResponseStrategy checkoutComMultibancoPaymentResponseStrategyMock;
+    @Mock
+    private CheckoutComPaymentReturnedService checkoutComPaymentReturnedServiceMock;
+
+    @Mock
+    private CartModel cartMock;
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private OrderModel orderMock;
     @Mock
-    private CartModel cartMock;
+    private CustomerModel userMock;
+    @Mock
+    private CardSourceResponse sourceMock;
     @Mock
     private CurrencyModel currencyModelMock;
     @Mock
+    private PaymentPending paymentPendingMock;
+    @Mock
+    private AuthorizeResponse authorizeResponseMock;
+    @Mock
+    private CheckoutComPaymentEventModel paymentEventMock;
+    @Mock
+    private PaymentTransactionModel paymentTransactionMock;
+    @Mock
+    private CheckoutComAPMPaymentInfoModel apmPaymentInfoMock;
+    @Mock
+    private CheckoutComApplePayPaymentInfoModel nonCardPaymentInfoMock;
+    @Mock
     private CheckoutComCreditCardPaymentInfoModel cardPaymentInfoMock, userPaymentInfo1Mock, userPaymentInfo2Mock;
-    @Mock
-    private PaymentTransactionModel paymentTransaction1Mock;
-    @Mock
-    private CommercePaymentProviderStrategy commercePaymentProviderStrategyMock;
     @Mock
     private PaymentTransactionEntryModel paymentTransactionEntryMock, capturePaymentTransactionEntryMock,
             capturePendingPaymentTransactionEntryMock, rejectedAuthorizationPaymentTransactionEntryMock,
             acceptedAuthorizationPaymentTransactionEntryMock, reviewAuthorizationPaymentTransactionEntryMock,
             refundPaymentTransactionEntry1Mock, refundPaymentTransactionEntry2Mock,
             cancelPaymentTransactionEntryMock, authorizationPendingPaymentTransactionEntryMock;
-    @Mock
-    private CheckoutComMerchantConfigurationService checkoutComMerchantConfigurationServiceMock;
-    @Mock
-    private CheckoutComPaymentEventModel paymentEventMock;
-    @Mock
-    private CheckoutComAPMPaymentInfoModel apmPaymentInfoMock;
-    @Mock
-    private CheckoutComPaymentTypeResolver checkoutComPaymentTypeResolverMock;
-    @Mock
-    private CheckoutComPaymentResponseStrategyMapper checkoutComPaymentResponseStrategyMapperMock;
-    @Mock
-    private PaymentPending paymentPendingMock;
-    @Mock
-    private CheckoutComMultibancoPaymentResponseStrategy checkoutComMultibancoPaymentResponseStrategyMock;
-    @Mock
-    private AuthorizeResponse authorizeResponseMock;
-    @Mock
-    private CardSourceResponse sourceMock;
-    @Mock
-    private CustomerModel userMock;
 
     @Before
     public void setUp() {
@@ -125,26 +119,10 @@ public class DefaultCheckoutComPaymentServiceTest {
         setUpPaymentEvent();
         setUpPaymentTransactionsAndTransactionEntries();
 
-        when(timeServiceMock.getCurrentTime()).thenReturn(CURRENT_DATE);
         when(orderMock.getCurrency()).thenReturn(currencyModelMock);
         when(orderMock.getPaymentInfo()).thenReturn(cardPaymentInfoMock);
-        when(orderMock.getPaymentTransactions()).thenReturn(singletonList(paymentTransaction1Mock));
-        when(commercePaymentProviderStrategyMock.getPaymentProvider()).thenReturn(PROVIDER);
-        when(modelServiceMock.create(PaymentTransactionModel.class)).thenReturn(new PaymentTransactionModel());
-        when(modelServiceMock.create(PaymentTransactionEntryModel.class)).thenReturn(new PaymentTransactionEntryModel());
-        when(currencyModelMock.getIsocode()).thenReturn("GBP");
-        when(cardPaymentInfoMock.getCode()).thenReturn(PAYMENT_1_CODE);
-        when(cartMock.getPaymentInfo()).thenReturn(cardPaymentInfoMock);
-        when(cartMock.getUser()).thenReturn(userMock);
-        when(userMock.getUid()).thenReturn(USER_ID);
-        when(userMock.getPaymentInfos()).thenReturn(ImmutableList.of(userPaymentInfo1Mock, userPaymentInfo2Mock));
-        when(userPaymentInfo1Mock.getCode()).thenReturn(PAYMENT_1_CODE);
-        when(userPaymentInfo2Mock.getCode()).thenReturn(PAYMENT_2_CODE);
-        when(cardPaymentInfoMock.getCode()).thenReturn(PAYMENT_1_CODE);
-        when(cardPaymentInfoMock.getUser()).thenReturn(userMock);
-        when(cartMock.getPaymentInfo()).thenReturn(cardPaymentInfoMock);
-        when(sourceMock.getId()).thenReturn(SUBSCRIPTION_ID);
-        when(paymentTransaction1Mock.getOrder()).thenReturn(orderMock);
+        when(orderMock.getPaymentTransactions()).thenReturn(singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getOrder()).thenReturn(orderMock);
         when(orderMock.getSite().getUid()).thenReturn(SITE_ID);
     }
 
@@ -157,28 +135,28 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isAuthorizationApproved_WhenNoAuthorisationPaymentTransactionEntries_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
 
         assertFalse(testObj.isAuthorizationApproved(orderMock));
     }
 
     @Test
     public void isAuthorizationApproved_WhenNotAcceptedAuthorisationPaymentTransactionEntry_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, rejectedAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, rejectedAuthorizationPaymentTransactionEntryMock));
 
         assertFalse(testObj.isAuthorizationApproved(orderMock));
     }
 
     @Test
     public void isAuthorizationApproved_WhenAcceptedAuthorisationPaymentTransactionEntry_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, acceptedAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, acceptedAuthorizationPaymentTransactionEntryMock));
 
         assertTrue(testObj.isAuthorizationApproved(orderMock));
     }
 
     @Test
     public void isAuthorizationApproved_WhenReviewAuthorisationPaymentTransactionEntry_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, reviewAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, reviewAuthorizationPaymentTransactionEntryMock));
 
         assertTrue(testObj.isAuthorizationApproved(orderMock));
     }
@@ -201,10 +179,9 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isAuthorizationPending_WhenNoAuthTransactionEntryAccepted_ShouldReturnTrue() {
-        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransaction1Mock));
-        when(paymentTransaction1Mock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
+        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
         when(paymentTransactionEntryMock.getType()).thenReturn(CAPTURE);
-        when(paymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.toString());
 
         final boolean result = testObj.isAuthorizationPending(orderMock);
 
@@ -213,8 +190,8 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isAuthorizationPending_WhenAcceptedAuthTransactionEntry_ShouldReturnFalse() {
-        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransaction1Mock));
-        when(paymentTransaction1Mock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
+        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
         when(paymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
         when(paymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.toString());
 
@@ -225,8 +202,8 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isAuthorizationPending_WhenPendingAuthTransactionEntry_ShouldReturnTrue() {
-        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransaction1Mock));
-        when(paymentTransaction1Mock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
+        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
         when(paymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
         when(paymentTransactionEntryMock.getTransactionStatus()).thenReturn(PENDING.toString());
 
@@ -271,10 +248,9 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isCaptureApproved_WhenNoCaptureTransactionEntryAccepted_ShouldReturnFalse() {
-        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransaction1Mock));
-        when(paymentTransaction1Mock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
+        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
         when(paymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
-        when(paymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.toString());
 
         final boolean result = testObj.isCaptureApproved(orderMock);
 
@@ -283,8 +259,8 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isCaptureApproved_WhenCaptureTransactionEntryAccepted_ShouldReturnTrue() {
-        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransaction1Mock));
-        when(paymentTransaction1Mock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
+        when(orderMock.getPaymentTransactions()).thenReturn(Collections.singletonList(paymentTransactionMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(Collections.singletonList(paymentTransactionEntryMock));
         when(paymentTransactionEntryMock.getType()).thenReturn(CAPTURE);
         when(paymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.toString());
 
@@ -294,21 +270,21 @@ public class DefaultCheckoutComPaymentServiceTest {
     }
 
     @Test
-    public void isAutoCapture_WhenOrderNull_ReturnFalse() {
+    public void isAutoCapture_WhenOrderNull_ShouldReturnFalse() {
         final boolean result = testObj.isAutoCapture(null);
 
         assertFalse(result);
     }
 
     @Test
-    public void isAutoCapture_WhenPaymentInfoNull_ReturnFalse() {
+    public void isAutoCapture_WhenPaymentInfoNull_ShouldReturnFalse() {
         final boolean result = testObj.isAutoCapture(orderMock);
 
         assertFalse(result);
     }
 
     @Test
-    public void isAutoCapture_WhenPaymentInfoNotAutoCapture_ReturnFalse() {
+    public void isAutoCapture_WhenPaymentInfoIsCardPayment_andDoesNotHaveAutoCapture_ShouldReturnFalse() {
         when(orderMock.getPaymentInfo()).thenReturn(cardPaymentInfoMock);
         when(cardPaymentInfoMock.getAutoCapture()).thenReturn(false);
 
@@ -318,13 +294,33 @@ public class DefaultCheckoutComPaymentServiceTest {
     }
 
     @Test
-    public void isAutoCapture_WhenPaymentInfoIsAutoCapture_ReturnTrue() {
+    public void isAutoCapture_When_WhenPaymentInfoIsCardPayment_andDoesHaveAutoCapture_ShouldReturnTrue() {
         when(orderMock.getPaymentInfo()).thenReturn(cardPaymentInfoMock);
         when(cardPaymentInfoMock.getAutoCapture()).thenReturn(true);
 
         final boolean result = testObj.isAutoCapture(orderMock);
 
         assertTrue(result);
+    }
+
+    @Test
+    public void isAutoCapture_When_WhenPaymentInfoIsNotCardPayment_andSiteIsUsingNAS_ShouldReturnTrue() {
+        when(orderMock.getPaymentInfo()).thenReturn(nonCardPaymentInfoMock);
+        when(orderMock.getSite().getCheckoutComMerchantConfiguration().getUseNas()).thenReturn(true);
+
+        final boolean result = testObj.isAutoCapture(orderMock);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void isAutoCapture_When_WhenPaymentInfoIsNotCardPayment_andSiteIsNotUsingNAS_ShouldReturnFalse() {
+        when(orderMock.getPaymentInfo()).thenReturn(nonCardPaymentInfoMock);
+        when(orderMock.getSite().getCheckoutComMerchantConfiguration().getUseNas()).thenReturn(false);
+
+        final boolean result = testObj.isAutoCapture(orderMock);
+
+        assertFalse(result);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -334,21 +330,21 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void captureExists_WhenThereAreNotTransactionEntries_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(emptyList());
+        when(paymentTransactionMock.getEntries()).thenReturn(emptyList());
 
         assertFalse(testObj.captureExists(orderMock));
     }
 
     @Test
     public void captureExists_WhenTransactionEntryCaptureDoesNotExist_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(rejectedAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(rejectedAuthorizationPaymentTransactionEntryMock));
 
         assertFalse(testObj.captureExists(orderMock));
     }
 
     @Test
     public void captureExists_WhenTransactionEntryCaptureExists_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, reviewAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(capturePaymentTransactionEntryMock, reviewAuthorizationPaymentTransactionEntryMock));
 
         assertTrue(testObj.captureExists(orderMock));
     }
@@ -360,21 +356,21 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isCapturePending_WhenThereAreNotTransactionEntries_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(emptyList());
+        when(paymentTransactionMock.getEntries()).thenReturn(emptyList());
 
         assertTrue(testObj.isCapturePending(orderMock));
     }
 
     @Test
     public void isCapturePending_WhenTransactionEntryCaptureDoesNotExist_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(rejectedAuthorizationPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(rejectedAuthorizationPaymentTransactionEntryMock));
 
         assertTrue(testObj.isCapturePending(orderMock));
     }
 
     @Test
     public void isCapturePending_WhenTransactionEntryCaptureExists_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePendingPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePendingPaymentTransactionEntryMock));
 
         assertFalse(testObj.isCapturePending(orderMock));
     }
@@ -393,21 +389,21 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isVoidPresent_WhenNoPaymentTransactionEntries_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(emptyList());
+        when(paymentTransactionMock.getEntries()).thenReturn(emptyList());
 
         assertFalse(testObj.isVoidPresent(orderMock));
     }
 
     @Test
     public void isVoidPresent_WhenNoCancelPaymentTransaction_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
 
         assertFalse(testObj.isVoidPresent(orderMock));
     }
 
     @Test
     public void isVoidPresent_WhenCancelPaymentTransactionPresent_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
 
         assertTrue(testObj.isVoidPresent(orderMock));
     }
@@ -427,21 +423,21 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isVoidPending_WhenNoPaymentTransactionEntries_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(emptyList());
+        when(paymentTransactionMock.getEntries()).thenReturn(emptyList());
 
         assertFalse(testObj.isVoidPending(orderMock));
     }
 
     @Test
     public void isVoidPending_WhenNoCancelPaymentTransaction_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
 
         assertFalse(testObj.isVoidPending(orderMock));
     }
 
     @Test
     public void isVoidPending_WhenCancelPaymentNoTransactionPending_ShouldReturnFalse() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
         when(cancelPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.name());
 
         assertFalse(testObj.isVoidPending(orderMock));
@@ -449,7 +445,7 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void isVoidPending_WhenCancelPaymentTransactionPending_ShouldReturnTrue() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(asList(acceptedAuthorizationPaymentTransactionEntryMock, capturePaymentTransactionEntryMock, cancelPaymentTransactionEntryMock));
         when(cancelPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(PENDING.name());
 
         assertTrue(testObj.isVoidPending(orderMock));
@@ -457,42 +453,41 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test
     public void findPendingTransactionEntry_WhenNoTransactionEntryForType_ShouldReturnEmpty() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(refundPaymentTransactionEntry1Mock));
-        when(refundPaymentTransactionEntry1Mock.getRequestId()).thenReturn(PAYMENT_ID);
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(refundPaymentTransactionEntry1Mock));
 
-        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransaction1Mock, CAPTURE);
+        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransactionMock, CAPTURE);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     public void findPendingTransactionEntry_WhenTransactionEntryForTypeWithDifferentPaymentId_ShouldReturnEmpty() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
         when(capturePaymentTransactionEntryMock.getRequestId()).thenReturn("somePaymentId");
 
-        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransaction1Mock, CAPTURE);
+        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransactionMock, CAPTURE);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     public void findPendingTransactionEntry_WhenTransactionEntryForTypeWithSamePaymentIdButNotPending_ShouldReturnEmpty() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
         when(capturePaymentTransactionEntryMock.getRequestId()).thenReturn(PAYMENT_ID);
         when(capturePaymentTransactionEntryMock.getTransactionStatus()).thenReturn(ACCEPTED.toString());
 
-        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransaction1Mock, CAPTURE);
+        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransactionMock, CAPTURE);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     public void findPendingTransactionEntry_WhenPendingTransactionEntryForTypeWithSamePaymentId_ShouldReturnTransactionEntry() {
-        when(paymentTransaction1Mock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
+        when(paymentTransactionMock.getEntries()).thenReturn(singletonList(capturePaymentTransactionEntryMock));
         when(capturePaymentTransactionEntryMock.getRequestId()).thenReturn(PAYMENT_ID);
         when(capturePaymentTransactionEntryMock.getTransactionStatus()).thenReturn(PENDING.toString());
 
-        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransaction1Mock, CAPTURE);
+        final Optional<PaymentTransactionEntryModel> result = testObj.findPendingTransactionEntry(PAYMENT_ID, paymentTransactionMock, CAPTURE);
 
         assertTrue(result.isPresent());
         assertSame(capturePaymentTransactionEntryMock, result.get());
@@ -500,7 +495,7 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void acceptPayment_WhenNullEvent_ShouldThrowException() {
-        testObj.acceptPayment(null, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(null, paymentTransactionMock, AUTHORIZATION);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -510,12 +505,12 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void acceptPayment_WhenNullTransactionType_ShouldThrowException() {
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, null);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void rejectPayment_WhenNullPaymentEvent_ShouldThrowException() {
-        testObj.rejectPayment(null, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.rejectPayment(null, paymentTransactionMock, AUTHORIZATION);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -525,7 +520,22 @@ public class DefaultCheckoutComPaymentServiceTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void rejectPayment_WhenNullTransactionType_ShouldThrowException() {
-        testObj.rejectPayment(paymentEventMock, paymentTransaction1Mock, null);
+        testObj.rejectPayment(paymentEventMock, paymentTransactionMock, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void returnPayment_WhenNullEvent_ShouldThrowException() {
+        testObj.returnPayment(null, paymentTransactionMock, RETURN);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void returnPayment_WhenNullTransaction_ShouldThrowException() {
+        testObj.returnPayment(paymentEventMock, null, RETURN);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void returnPayment_WhenNullTransactionType_ShouldThrowException() {
+        testObj.returnPayment(paymentEventMock, paymentTransactionMock, null);
     }
 
     @Test
@@ -583,11 +593,11 @@ public class DefaultCheckoutComPaymentServiceTest {
     }
 
     @Test
-    public void acceptPayment_WhenPaymentTransactionEntryExists_ShouldUpdateStatusToAccepted() {
+    public void acceptPayment_WhenPaymentTransactionEntryExists_ShouldUpdateStatusToAccepted_andOrderStatusToPaymentCaptured() {
         when(paymentEventMock.getPaymentId()).thenReturn(PAYMENT_ID);
-        doReturn(Optional.of(paymentTransactionEntryMock)).when(testObj).findPendingTransactionEntry(PAYMENT_ID, paymentTransaction1Mock, AUTHORIZATION);
+        doReturn(Optional.of(paymentTransactionEntryMock)).when(testObj).findPendingTransactionEntry(PAYMENT_ID, paymentTransactionMock, AUTHORIZATION);
 
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
         verify(paymentTransactionEntryMock).setTransactionStatus(ACCEPTED.name());
         verify(modelServiceMock).save(paymentTransactionEntryMock);
@@ -599,20 +609,19 @@ public class DefaultCheckoutComPaymentServiceTest {
         when(paymentEventMock.getRiskFlag()).thenReturn(Boolean.FALSE);
         doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
 
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
-        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransaction1Mock, paymentEventMock, ACCEPTED.name(), SUCCESFULL.name(), AUTHORIZATION);
+        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, ACCEPTED.name(), SUCCESFULL.name(), AUTHORIZATION);
     }
 
     @Test
     public void acceptPayment_WhenPaymentTransactionEntryDoesNotExistAndEventIsPaymentPending_ShouldCreateNewPendingEntry() {
-        when(paymentEventMock.getRiskFlag()).thenReturn(Boolean.FALSE);
         when(paymentEventMock.getEventType()).thenReturn(PAYMENT_PENDING.getCode());
         doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
 
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
-        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransaction1Mock, paymentEventMock, PENDING.name(), SUCCESFULL.name(), AUTHORIZATION);
+        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, PENDING.name(), SUCCESFULL.name(), AUTHORIZATION);
     }
 
     @Test
@@ -621,9 +630,12 @@ public class DefaultCheckoutComPaymentServiceTest {
         when(checkoutComMerchantConfigurationServiceMock.isReviewTransactionsAtRisk(SITE_ID)).thenReturn(false);
         doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
 
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
-        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransaction1Mock, paymentEventMock, ACCEPTED.name(), SUCCESFULL.name(), AUTHORIZATION);
+        final InOrder inOrder = inOrder(orderMock, modelServiceMock, checkoutComPaymentTransactionServiceMock);
+        inOrder.verify(orderMock).setStatus(OrderStatus.PAYMENT_CAPTURED);
+        inOrder.verify(modelServiceMock).save(orderMock);
+        inOrder.verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, ACCEPTED.name(), SUCCESFULL.name(), AUTHORIZATION);
     }
 
     @Test
@@ -632,18 +644,30 @@ public class DefaultCheckoutComPaymentServiceTest {
         when(checkoutComMerchantConfigurationServiceMock.isReviewTransactionsAtRisk(SITE_ID)).thenReturn(true);
         doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
 
-        testObj.acceptPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.acceptPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
-        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransaction1Mock, paymentEventMock, REVIEW.name(), REVIEW_NEEDED.name(), AUTHORIZATION);
+        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, REVIEW.name(), REVIEW_NEEDED.name(), AUTHORIZATION);
     }
 
     @Test
     public void rejectPayment_ShouldCreateRejectedPaymentTransactionEntryForApprovedEventType() {
         doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
 
-        testObj.rejectPayment(paymentEventMock, paymentTransaction1Mock, AUTHORIZATION);
+        testObj.rejectPayment(paymentEventMock, paymentTransactionMock, AUTHORIZATION);
 
-        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransaction1Mock, paymentEventMock, REJECTED.name(), PROCESSOR_DECLINE.name(), AUTHORIZATION);
+        verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, REJECTED.name(), PROCESSOR_DECLINE.name(), AUTHORIZATION);
+    }
+
+    @Test
+    public void returnPayment_ShouldUpdateOrderStatusToPaymentReturned() {
+        doNothing().when(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(any(PaymentTransactionModel.class), any(CheckoutComPaymentEventModel.class), anyString(), anyString(), any(PaymentTransactionType.class));
+
+        testObj.returnPayment(paymentEventMock, paymentTransactionMock, RETURN);
+
+        final InOrder inOrder = inOrder(orderMock, modelServiceMock, checkoutComPaymentTransactionServiceMock);
+        inOrder.verify(orderMock).setStatus(OrderStatus.PAYMENT_RETURNED);
+        inOrder.verify(modelServiceMock).save(orderMock);
+        inOrder.verify(checkoutComPaymentTransactionServiceMock).createPaymentTransactionEntry(paymentTransactionMock, paymentEventMock, ACCEPTED.name(), SUCCESFULL.name(), RETURN);
     }
 
     private void setUpTestObjMocks() {
@@ -652,34 +676,23 @@ public class DefaultCheckoutComPaymentServiceTest {
         ReflectionTestUtils.setField(testObj, "checkoutComPaymentResponseStrategyMapper", checkoutComPaymentResponseStrategyMapperMock);
         ReflectionTestUtils.setField(testObj, "checkoutComPaymentTypeResolver", checkoutComPaymentTypeResolverMock);
         ReflectionTestUtils.setField(testObj, "checkoutComPaymentTransactionService", checkoutComPaymentTransactionServiceMock);
+        ReflectionTestUtils.setField(testObj, "checkoutComPaymentReturnedService", checkoutComPaymentReturnedServiceMock);
     }
 
     private void setUpPaymentEvent() {
-        when(paymentEventMock.getActionId()).thenReturn(ACTION_ID);
-        when(paymentEventMock.getCurrency()).thenReturn(currencyModelMock);
-        when(paymentEventMock.getAmount()).thenReturn(AMOUNT);
         when(paymentEventMock.getEventType()).thenReturn(PAYMENT_APPROVED.toString());
     }
 
     private void setUpPaymentTransactionsAndTransactionEntries() {
-        when(paymentTransaction1Mock.getCode()).thenReturn(PAYMENT_REFERENCE);
-        when(paymentTransaction1Mock.getRequestId()).thenReturn(PAYMENT_ID);
         when(capturePaymentTransactionEntryMock.getType()).thenReturn(CAPTURE);
         when(capturePendingPaymentTransactionEntryMock.getType()).thenReturn(CAPTURE);
-        when(capturePendingPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(PENDING.toString());
-        when(authorizationPendingPaymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
-        when(authorizationPendingPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(PENDING.toString());
         when(rejectedAuthorizationPaymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
         when(rejectedAuthorizationPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(TransactionStatus.REJECTED.toString());
         when(acceptedAuthorizationPaymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
         when(acceptedAuthorizationPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(TransactionStatus.ACCEPTED.toString());
-        when(acceptedAuthorizationPaymentTransactionEntryMock.getTransactionStatusDetails()).thenReturn(SUCCESFULL.toString());
         when(reviewAuthorizationPaymentTransactionEntryMock.getType()).thenReturn(AUTHORIZATION);
         when(reviewAuthorizationPaymentTransactionEntryMock.getTransactionStatus()).thenReturn(TransactionStatus.REVIEW.toString());
-        when(refundPaymentTransactionEntry1Mock.getType()).thenReturn(REFUND_FOLLOW_ON);
-        when(refundPaymentTransactionEntry2Mock.getType()).thenReturn(REFUND_FOLLOW_ON);
         when(cancelPaymentTransactionEntryMock.getType()).thenReturn(CANCEL);
-        when(acceptedAuthorizationPaymentTransactionEntryMock.getCurrency()).thenReturn(currencyModelMock);
-        when(checkoutComPaymentTransactionServiceMock.getPaymentTransaction(orderMock)).thenReturn(paymentTransaction1Mock);
+        when(checkoutComPaymentTransactionServiceMock.getPaymentTransaction(orderMock)).thenReturn(paymentTransactionMock);
     }
 }
